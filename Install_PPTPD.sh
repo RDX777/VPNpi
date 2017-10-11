@@ -13,6 +13,7 @@ then
 	sudo cp /etc/pptpd_pptpd_Original.conf /etc/pptpd.conf
 	sudo cp /etc/ppp/pptpd-options_pptpd_Original /etc/ppp/pptpd-options
 	sudo cp /etc/sysctl_pptpd_Original.conf /etc/sysctl.conf
+	sudo cp /etc/rc.local_pptpd_Original /etc/rc.local
 else
 	echo "NECESSARIO CONEXÃO COM A INTERNET"
 	echo ""
@@ -35,10 +36,13 @@ else
 	if [ ! -f /etc/sysctl_pptpd_Original.conf ]
 	then
 		sudo cp /etc/sysctl.conf /etc/sysctl_pptpd_Original.conf
+	fi
+	if [ ! -f /etc/rc.local_pptpd_Original ]
+	then
+		sudo cp /etc/rc.local /etc/rc.local_pptpd_Original
 	fi	
 fi
 
-echo ""
 echo ""
 echo "Configuração inicial da VPN."
 echo ""
@@ -68,14 +72,30 @@ read ServidorDNS
 		ServidorDNS=10.0.0.1
 	fi
 
-echo "Deseja habilitar o encaminhamento de rede?"
+echo "Deseja habilitar o encaminhamento de rede, para os micros da rede $IpRemoto?"
 echo "Sim = s ou Não = n | Em branco = Não"
-read EncaminhamentoRede
-	if [ "$EncaminhamentoRede" = "s" ]
+read EncaminhamentoRedeRedeRemoto
+	if [ "$EncaminhamentoRedeRemoto" = "s" ] || [ "$EncaminhamentoRedeRemoto" = "S" ]
 	then
-		EncaminhamentoRede="1"
+		EncaminhamentoRedeRemoto="1"
 	else
-		EncaminhamentoRede="0"
+		EncaminhamentoRedeRemoto="0"
+	fi
+
+echo "Deseja habilitar o encaminhamento de rede, para os micros da rede LAN?"
+echo "Sim = s ou Não = n | Em branco = Não"
+read EncaminhamentoRedeLAN
+	if [ "$EncaminhamentoRedeLAN" = "s" ] || [ "$EncaminhamentoRedeLAN" = "S" ]
+	then
+		echo "Digite a interface conectada a sua rede interna:"
+		echo "1 = eth0 ou 2 = wlan0"
+		read InterfaceInterna
+		if [ "$InterfaceInterna" = 1 ]
+		then
+			InterfaceInterna="eth0"
+		else
+			InterfaceInterna="wlan0"
+		fi
 	fi
 
 sudo echo "" >> /etc/pptpd.conf
@@ -87,7 +107,7 @@ sudo echo "nobsdcomp" >> /etc/ppp/pptpd-options
 sudo echo "noipx" >> /etc/ppp/pptpd-options
 sudo echo "mtu 1490" >> /etc/ppp/pptpd-options
 sudo echo "mru 1490" >> /etc/ppp/pptpd-options
-sudo echo "net.ipv4.ip_forward=$EncaminhamentoRede" >> /etc/sysctl.conf
+sudo echo "net.ipv4.ip_forward=$EncaminhamentoRedeRemoto" >> /etc/sysctl.conf
 
 resposta="s"
 while [ "$resposta" = "s" ] || [ "$resposta" = "S" ]
@@ -113,8 +133,13 @@ fi
 done
 
 sudo sed -i -e '/^exit 0/i sudo /etc/init.d/pptpd start' /etc/rc.local
+if [ "$EncaminhamentoRedeLAN" = "s" ] || [ "$EncaminhamentoRedeLAN" = "S" ]
+then
+	sudo iptables -t nat -A POSTROUTING -o $InterfaceInterna -j MASQUERADE
+	sudo sed -i -e '/^exit 0/i sudo iptables -t nat -A POSTROUTING -o '$InterfaceInterna' -j MASQUERADE' /etc/rc.local	
+fi
 
-clear
+#clear
 echo "Configuração concluida!"
 echo "Reiniciando PPTPD..."
 sudo /etc/init.d/pptpd restart
