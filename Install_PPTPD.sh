@@ -72,9 +72,9 @@ read ServidorDNS
 		ServidorDNS=10.0.0.1
 	fi
 
-echo "Deseja habilitar o encaminhamento de rede, para os micros da rede $IpRemoto?"
+echo "Deseja habilitar o encaminhamento de rede para os IPs $IpRemoto?"
 echo "Sim = s ou Não = n | Em branco = Não"
-read EncaminhamentoRedeRedeRemoto
+read EncaminhamentoRedeRemoto
 	if [ "$EncaminhamentoRedeRemoto" = "s" ] || [ "$EncaminhamentoRedeRemoto" = "S" ]
 	then
 		EncaminhamentoRedeRemoto="1"
